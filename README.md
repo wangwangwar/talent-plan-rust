@@ -16,11 +16,11 @@ ref: https://github.com/pingcap/talent-plan
     - [x] cli_invalid_subcommand
 - [x] Part 3: Cargo environment variables
     - [x] cli_version
-- [ ] Part 4: Store values in memory
-    - [ ] get_stored_value
-    - [ ] overwrite_value
-    - [ ] get_non_existent_value
-    - [ ] remove_key
+- [x] Part 4: Store values in memory
+    - [x] get_stored_value
+    - [x] overwrite_value
+    - [x] get_non_existent_value
+    - [x] remove_key
 
 - [ ] Part 5: Documentation
 - [ ] Part 6: Ensure good style with clippy and rustfmt
