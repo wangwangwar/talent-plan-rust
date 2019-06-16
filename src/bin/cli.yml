@@ -1,0 +1,23 @@
+name: "kvs"
+subcommands:
+    - set:
+        about: Set the value of a string key to a string
+        args:
+            - KEY:
+                help: string key
+                required: true
+            - VALUE:
+                help: string value
+                required: true
+    - get:
+        about: Get the string value of a given string key
+        args:
+            - KEY:
+                help: string key
+                required: true
+    - rm:
+        about: Remove a given key
+        args:
+            - KEY:
+                help: string key
+                required: true

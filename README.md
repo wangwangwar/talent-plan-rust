@@ -4,18 +4,18 @@ ref: https://github.com/pingcap/talent-plan
 
 ## Project 1: The Rust toolbox
 
-- [ ] Part 1: Make the tests compile
-- [ ] Part 2: Accept command line arguments
-    - [ ] cli_no_args
-    - [ ] cli_get
-    - [ ] cli_set
-    - [ ] cli_rm
-    - [ ] cli_invalid_get
-    - [ ] cli_invalid_set
-    - [ ] cli_invalid_rm
-    - [ ] cli_invalid_subcommand
-- [ ] Part 3: Cargo environment variables
-    - [ ] cli_version
+- [x] Part 1: Make the tests compile
+- [x] Part 2: Accept command line arguments
+    - [x] cli_no_args
+    - [x] cli_get
+    - [x] cli_set
+    - [x] cli_rm
+    - [x] cli_invalid_get
+    - [x] cli_invalid_set
+    - [x] cli_invalid_rm
+    - [x] cli_invalid_subcommand
+- [x] Part 3: Cargo environment variables
+    - [x] cli_version
 - [ ] Part 4: Store values in memory
     - [ ] get_stored_value
     - [ ] overwrite_value
