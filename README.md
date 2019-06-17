@@ -23,5 +23,5 @@ ref: https://github.com/pingcap/talent-plan
     - [x] remove_key
 
 - [x] Part 5: Documentation
-- [ ] Part 6: Ensure good style with clippy and rustfmt
+- [x] Part 6: Ensure good style with clippy and rustfmt
 - [ ] Extension 1: structopt

@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate clap;
 use clap::App;
-use std::process;
 use std::io::{self, Write};
+use std::process;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -13,20 +13,20 @@ fn main() {
         .version(crate_version!())
         .get_matches();
     match m.subcommand() {
-        ("set", Some(sub_m)) => {
-            io::stderr().write_all(b"unimplemented");
+        ("set", Some(_)) => {
+            let _ = io::stderr().write_all(b"unimplemented");
             process::exit(-1);
         }
-        ("get", Some(sub_m)) => {
-            io::stderr().write_all(b"unimplemented");
+        ("get", Some(_)) => {
+            let _ = io::stderr().write_all(b"unimplemented");
             process::exit(-1);
         }
-        ("rm", Some(sub_m)) => {
-            io::stderr().write_all(b"unimplemented");
+        ("rm", Some(_)) => {
+            let _ = io::stderr().write_all(b"unimplemented");
             process::exit(-1);
         }
         (_, _) => {
-            io::stderr().write_all(b"unimplemented");
+            let _ = io::stderr().write_all(b"unimplemented");
             process::exit(-1)
         }
     }
