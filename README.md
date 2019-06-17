@@ -22,6 +22,6 @@ ref: https://github.com/pingcap/talent-plan
     - [x] get_non_existent_value
     - [x] remove_key
 
-- [ ] Part 5: Documentation
+- [x] Part 5: Documentation
 - [ ] Part 6: Ensure good style with clippy and rustfmt
 - [ ] Extension 1: structopt
