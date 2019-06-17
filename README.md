@@ -25,3 +25,13 @@ ref: https://github.com/pingcap/talent-plan
 - [x] Part 5: Documentation
 - [x] Part 6: Ensure good style with clippy and rustfmt
 - [x] Extension 1: structopt
+
+## Project 2: Log-structured file I/O
+
+- [ ] Part 1: Error handling
+- [ ] Part 2: How the log behaves
+- [ ] Part 3: Writing to the log
+- [ ] Part 4: Reading from the log
+- [ ] Part 5: Storing log pointers in the index
+- [ ] Part 6: Stateless vs. stateful `KvStore`
+- [ ] Part 7: Compacting the log
