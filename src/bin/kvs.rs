@@ -1,5 +1,6 @@
 extern crate structopt;
 use structopt::StructOpt;
+use kvs::Result;
 
 use std::io::{self, Write};
 use std::process;
@@ -29,7 +30,7 @@ enum Opt {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     let opt = Opt::from_args();
     
     match opt {

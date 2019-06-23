@@ -28,7 +28,7 @@ ref: https://github.com/pingcap/talent-plan
 
 ## Project 2: Log-structured file I/O
 
-- [ ] Part 1: Error handling
+- [x] Part 1: Error handling
 - [ ] Part 2: How the log behaves
 - [ ] Part 3: Writing to the log
 - [ ] Part 4: Reading from the log
