@@ -13,3 +13,6 @@ walkdir = "2.2.8"
 
 [dependencies]
 structopt = "0.2.16"
+serde = "1.0.92"
+bincode = "1.1.4"
+libc = "0.2"

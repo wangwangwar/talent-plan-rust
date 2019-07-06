@@ -1,4 +1,4 @@
-# Pingcap Talant Plan for Rust
+# Pingcap Talent Plan for Rust
 
 ref: https://github.com/pingcap/talent-plan
 
