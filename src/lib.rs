@@ -55,9 +55,64 @@ enum Command {
 /// Log data file's name
 const LOG_DATA_FILE_NAME: &str = "log.data";
 
+/// Implementation choices
+/// 
+/// 1. Serialization Format
+///     Do you want to prioritize performance? Do you want to be able to read the content of the
+///     log in plain text?
+/// 
+/// 2. Serialization Method
+///     Write it either to a String or a stream implementing Write?
+/// 
+/// 3. Deserialization Method
+///     3.1 Should you read all records in the log into memory at once and then replay them into 
+///         your map type; or should you read them one at a time while replaying the into your map?
+///     3.2 Should you read into a buffer before deserializing or deserialize from a file stream?
+///
+/// 4. IO Mode
+///     Read and write the log data file in which IO mode? Buffered or direct? Block or non-block?
+///     Sync or async?
+/// 
+/// A1: Bincode
+/// 
+/// A2: Write it to a String
+/// 
+/// A3.1: Now I choose to read then one at a time while replaying into the map. From the memory 
+///     usage perspective, the former implementation use a buffer with *infinite size*, while 
+///     the latter use a buffer with *one record size*. From the IO efficiency perspective, the
+///     former implementation read IO sequently, while the latter read IO randomly. Reading IO
+///     sequently is faster than randomly in most cases.
+///     TODO: Better choice is to use a buffer with a *larger fixed size*, balance the memory
+///     usage and IO efficiency.
+/// 
+/// A3.2: Now I choose to read into a buffer before deserializing. Bincode has the function
+///     `bincode::deserilize_from` which can deserialize an object directly from `File`(`Read`er),
+///     but how it read the file is unknown to me (source code?), and can't control the way to
+///     read the file.
+/// 
+/// A4: Now I choose the default buffered, block and async IO mode. At the beginning I want to use
+///     buffered IO like this:
+///     ```
+///     extern crate libc;
+///     use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
+/// 
+///     fn main() {
+///         let options = OpenOptions::new()
+///             .read(true)
+///             .write(true)
+///             .create(true)
+///         if cfg!(unix) {
+///             options.custom_flags(libc::O_DIRECT);
+///         }
+///         let file = options.open("foo.txt");
+///     }
+///     ```
+///     But return the error `Io(Os { code: 22, kind: InvalidInput, message: "Invalid argument" })`
+///     TODO: Fix it
 impl KvStore {
     /// Open the KV store
     ///
+    /// TODO:
     /// Open/create the log data file in `path` with *direct* mode, because we
     /// manage data caching at the application level, so we do not need the
     /// file system to implement this service for them. The use of a file
