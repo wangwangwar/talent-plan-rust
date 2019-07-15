@@ -8,6 +8,7 @@ use std::fs::OpenOptions;
 use std::io::{self, prelude::*};
 use std::path::Path;
 use std::result;
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 /// Key value store struct
 #[derive(Debug)]
@@ -74,6 +75,14 @@ const LOG_DATA_FILE_NAME: &str = "log.data";
 ///     Sync or async?
 /// 
 /// A1: Bincode
+///     Binary format:
+///     ```
+///     <length of serialized command><serialized command><length of ...>...
+///     ```
+///     To meet the requirements that the key's maximum size is 256B and the value's maximum size
+///     is 4KB while the serialized command's maximum size is no less than (4096 + 256 = 4352)B,
+///     the size of bytes to represent the size of serialized command is set as 2Bytes (big endian),
+///     which support max size of (2^16 - 1 = 65535)B.
 /// 
 /// A2: Write it to a String
 /// 
@@ -110,6 +119,7 @@ const LOG_DATA_FILE_NAME: &str = "log.data";
 ///     But return the error `Io(Os { code: 22, kind: InvalidInput, message: "Invalid argument" })`
 ///     TODO: Fix it
 impl KvStore {
+
     /// Open the KV store
     ///
     /// TODO:
@@ -129,12 +139,12 @@ impl KvStore {
         let mut log_file = options.open(path.join(LOG_DATA_FILE_NAME))?;
 
         loop {
-            let mut len_buf = [0; 1];
+            let mut length_bytes_buf: [u16; 1] = [0; 1];
             let result = log_file
-                .read_exact(&mut len_buf)
+                .read_u16_into::<BigEndian>(&mut length_bytes_buf)
                 .map_err(Error::Io)
                 .and_then(|_| {
-                    let len = len_buf.first().unwrap();
+                    let len = length_bytes_buf.first().unwrap();
                     let mut command_buf = vec![0; *len as usize];
                     log_file.read_exact(&mut command_buf)?;
                     let command: Command = bincode::deserialize(&command_buf)?;
@@ -175,11 +185,12 @@ impl KvStore {
             key: key.clone(),
             value: value.clone(),
         };
-        let mut encoded: Vec<u8> = bincode::serialize(&command).unwrap();
-        encoded.insert(0, encoded.len() as u8);
+        let encoded: Vec<u8> = bincode::serialize(&command).unwrap();
+        self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
         self.log_file.write_all(&encoded)?;
+        self.log_file.flush()?;
 
-        self.map.insert(key, value);
+        self.map.insert(key.to_owned(), value);
         Ok(())
     }
 
@@ -217,9 +228,11 @@ impl KvStore {
     /// return `Err` when other error occurs
     pub fn remove(&mut self, key: String) -> Result<String> {
         let command = Command::Remove { key: key.clone() };
-        let mut encoded: Vec<u8> = bincode::serialize(&command).unwrap();
-        encoded.insert(0, encoded.len() as u8);
+        let encoded: Vec<u8> = bincode::serialize(&command).unwrap();
+        self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
         self.log_file.write_all(&encoded)?;
+        self.log_file.flush()?;
+
         self.map.remove(&key).ok_or_else(|| Error::KeyNotFound(key))
     }
 }
