@@ -32,6 +32,6 @@ ref: https://github.com/pingcap/talent-plan
 - [x] Part 2: How the log behaves
 - [x] Part 3: Writing to the log
 - [x] Part 4: Reading from the log
-- [ ] Part 5: Storing log pointers in the index
-- [ ] Part 6: Stateless vs. stateful `KvStore`
+- [x] Part 5: Storing log pointers in the index
+- [x] Part 6: Stateless vs. stateful `KvStore`
 - [ ] Part 7: Compacting the log

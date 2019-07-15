@@ -13,7 +13,8 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 /// Key value store struct
 #[derive(Debug)]
 pub struct KvStore {
-    map: HashMap<String, String>,
+    /// <key>-<log offset> map
+    map: HashMap<String, u64>,
     log_file: File,
 }
 
@@ -133,11 +134,12 @@ impl KvStore {
     ///
     /// Return the new instance
     pub fn open(path: &Path) -> Result<Self> {
-        let mut map = HashMap::new();
+        let mut map: HashMap<String, u64> = HashMap::new();
         let mut options = OpenOptions::new();
         options.read(true).write(true).create(true);
         let mut log_file = options.open(path.join(LOG_DATA_FILE_NAME))?;
 
+        let mut log_offset: u64 = 0;
         loop {
             let mut length_bytes_buf: [u16; 1] = [0; 1];
             let result = log_file
@@ -149,14 +151,15 @@ impl KvStore {
                     log_file.read_exact(&mut command_buf)?;
                     let command: Command = bincode::deserialize(&command_buf)?;
                     match command {
-                        Command::Set { key, value } => {
-                            map.insert(key, value);
+                        Command::Set { key, .. } => {
+                            map.insert(key, log_offset);
                         }
                         Command::Remove { key } => {
                             map.remove(&key);
                         }
                         Command::Get { .. } => {}
                     }
+                    log_offset += *len as u64 + 2;
                     Ok(())
                 });
             if result.is_err() {
@@ -164,7 +167,10 @@ impl KvStore {
             }
         }
 
-        Ok(KvStore { map, log_file })
+        Ok(KvStore {
+            map,
+            log_file,
+        })
     }
 
     /// Set the value of the string `key` to the `value`
@@ -186,11 +192,12 @@ impl KvStore {
             value: value.clone(),
         };
         let encoded: Vec<u8> = bincode::serialize(&command).unwrap();
+        let current_log_file_offset = self.log_file.seek(io::SeekFrom::End(0))?;
         self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
         self.log_file.write_all(&encoded)?;
         self.log_file.flush()?;
+        self.map.insert(key.to_owned(), current_log_file_offset);
 
-        self.map.insert(key.to_owned(), value);
         Ok(())
     }
 
@@ -207,8 +214,21 @@ impl KvStore {
     /// Return `Ok(Some)` when getting a existent key,
     /// return `Ok(None)` when getting a non-existent key,
     /// return `Err` when error
-    pub fn get(&self, key: String) -> Result<Option<String>> {
-        Ok(self.map.get(&key).cloned())
+    pub fn get(&mut self, key: String) -> Result<Option<String>> {
+        let optional_offset = self.map.get(&key).cloned();
+        if optional_offset.is_none() {
+            return Ok(None);
+        }
+
+        self.log_file.seek(io::SeekFrom::Start(optional_offset.unwrap()))?;
+        let len = self.log_file.read_u16::<BigEndian>().unwrap();
+        let mut command_buf = vec![0; len as usize];
+        self.log_file.read_exact(&mut command_buf)?;
+        let command: Command = bincode::deserialize(&command_buf)?;
+        match command {
+            Command::Set { value, .. } => Ok(Some(value)),
+            _ => Ok(None),
+        }
     }
 
     /// Remove the `key`
@@ -223,16 +243,23 @@ impl KvStore {
     ///         If that succeeds, it exits silently with error code 0
     ///
     /// Return `Ok(value)` previously stored value when removing a existent key,
-    /// return `Ok(None)`
     /// return `Err(Error::KeyNotFound)` when when removing a non-existent key
     /// return `Err` when other error occurs
     pub fn remove(&mut self, key: String) -> Result<String> {
         let command = Command::Remove { key: key.clone() };
         let encoded: Vec<u8> = bincode::serialize(&command).unwrap();
+        self.log_file.seek(io::SeekFrom::End(0))?;
         self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
         self.log_file.write_all(&encoded)?;
         self.log_file.flush()?;
 
-        self.map.remove(&key).ok_or_else(|| Error::KeyNotFound(key))
+        let stored_value = self.get(key.clone());
+        self.map.remove(&key);
+
+        match stored_value {
+            Ok(Some(value)) => Ok(value),
+            Ok(None) => Err(Error::KeyNotFound(key)),
+            Err(err) => Err(err),
+        }
     }
 }
