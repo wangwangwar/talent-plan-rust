@@ -159,7 +159,11 @@ impl KvStore {
                         }
                         Command::Get { .. } => {}
                     }
+<<<<<<< HEAD
                     log_offset += *len as u64 + 2;
+=======
+                    log_offset += u64::from(*len) + 2;
+>>>>>>> Part 5, 6: Storing Log Pointers in the Index
                     Ok(())
                 });
             if result.is_err() {
