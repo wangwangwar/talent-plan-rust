@@ -14,7 +14,9 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 #[derive(Debug)]
 pub struct KvStore {
     /// <key>-<log offset> map
-    map: HashMap<String, u64>,
+    key_offset_map: HashMap<String, u64>,
+    /// <key>-<value> map
+    key_value_map: HashMap<String, String>,
     log_file: File,
 }
 
@@ -59,6 +61,8 @@ const LOG_DATA_FILE_NAME: &str = "log.data";
 
 /// Implementation choices
 /// 
+/// Questions:
+/// 
 /// 1. Serialization Format
 ///     Do you want to prioritize performance? Do you want to be able to read the content of the
 ///     log in plain text?
@@ -74,6 +78,8 @@ const LOG_DATA_FILE_NAME: &str = "log.data";
 /// 4. IO Mode
 ///     Read and write the log data file in which IO mode? Buffered or direct? Block or non-block?
 ///     Sync or async?
+/// 
+/// Answers:
 /// 
 /// A1: Bincode
 ///     Binary format:
@@ -105,7 +111,6 @@ const LOG_DATA_FILE_NAME: &str = "log.data";
 ///     ```
 ///     extern crate libc;
 ///     use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt};
-/// 
 ///     fn main() {
 ///         let options = OpenOptions::new()
 ///             .read(true)
@@ -134,7 +139,9 @@ impl KvStore {
     ///
     /// Return the new instance
     pub fn open(path: &Path) -> Result<Self> {
-        let mut map: HashMap<String, u64> = HashMap::new();
+        let mut key_offset_map: HashMap<String, u64> = HashMap::new();
+        let mut key_value_map: HashMap<String, String> = HashMap::new();
+
         let mut options = OpenOptions::new();
         options.read(true).write(true).create(true);
         let mut log_file = options.open(path.join(LOG_DATA_FILE_NAME))?;
@@ -151,19 +158,17 @@ impl KvStore {
                     log_file.read_exact(&mut command_buf)?;
                     let command: Command = bincode::deserialize(&command_buf)?;
                     match command {
-                        Command::Set { key, .. } => {
-                            map.insert(key, log_offset);
+                        Command::Set { key, value } => {
+                            key_offset_map.insert(key.clone(), log_offset);
+                            key_value_map.insert(key, value);
                         }
                         Command::Remove { key } => {
-                            map.remove(&key);
+                            key_offset_map.remove(&key);
+                            key_value_map.remove(&key);
                         }
                         Command::Get { .. } => {}
                     }
-<<<<<<< HEAD
-                    log_offset += *len as u64 + 2;
-=======
                     log_offset += u64::from(*len) + 2;
->>>>>>> Part 5, 6: Storing Log Pointers in the Index
                     Ok(())
                 });
             if result.is_err() {
@@ -172,7 +177,8 @@ impl KvStore {
         }
 
         Ok(KvStore {
-            map,
+            key_offset_map,
+            key_value_map,
             log_file,
         })
     }
@@ -200,7 +206,9 @@ impl KvStore {
         self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
         self.log_file.write_all(&encoded)?;
         self.log_file.flush()?;
-        self.map.insert(key.to_owned(), current_log_file_offset);
+        self.key_offset_map.insert(key.to_owned(), current_log_file_offset);
+        self.key_value_map.insert(key.to_owned(), value);
+        self.compact_log_file()?;
 
         Ok(())
     }
@@ -219,7 +227,9 @@ impl KvStore {
     /// return `Ok(None)` when getting a non-existent key,
     /// return `Err` when error
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
-        let optional_offset = self.map.get(&key).cloned();
+        Ok(self.key_value_map.get(&key).cloned())
+        /*
+        let optional_offset = self.key_offset_map.get(&key).cloned();
         if optional_offset.is_none() {
             return Ok(None);
         }
@@ -233,6 +243,7 @@ impl KvStore {
             Command::Set { value, .. } => Ok(Some(value)),
             _ => Ok(None),
         }
+        */
     }
 
     /// Remove the `key`
@@ -258,12 +269,36 @@ impl KvStore {
         self.log_file.flush()?;
 
         let stored_value = self.get(key.clone());
-        self.map.remove(&key);
+        self.key_offset_map.remove(&key);
+        self.key_value_map.remove(&key);
 
         match stored_value {
             Ok(Some(value)) => Ok(value),
             Ok(None) => Err(Error::KeyNotFound(key)),
             Err(err) => Err(err),
         }
+    }
+
+    /// Compact the log 
+    /// 
+    /// Naive solution: similar like the map initialization while opening the log file.
+    /// Steps:
+    /// 2. Write it back to the log file
+    /// 
+    /// When to compact?
+    fn compact_log_file(&mut self) -> Result<()> {
+
+        // 2. Write it back to the log file
+        self.log_file.set_len(0)?;
+        for (key, value) in self.key_value_map.iter() {
+            let command = Command::Set { key: key.clone(), value: value.clone() };
+            let encoded: Vec<u8> = bincode::serialize(&command).unwrap();
+            self.log_file.seek(io::SeekFrom::End(0))?;
+            self.log_file.write_u16::<BigEndian>(encoded.len() as u16)?;
+            self.log_file.write_all(&encoded)?;
+        }
+        self.log_file.flush()?;
+
+        Ok(())
     }
 }

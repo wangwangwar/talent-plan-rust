@@ -35,3 +35,7 @@ ref: https://github.com/pingcap/talent-plan
 - [x] Part 5: Storing log pointers in the index
 - [x] Part 6: Stateless vs. stateful `KvStore`
 - [ ] Part 7: Compacting the log
+  - [x] The naive solution
+  - [ ] Do the compaction by copying or in-place
+  - [ ] Maintain data-integrity if compaction fails
+  - [ ] Split the log across files
